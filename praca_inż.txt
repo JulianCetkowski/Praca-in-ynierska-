@@ -1,0 +1,212 @@
+Niestety Matlab powita³ mnie informacj¹ o utracie licencji studenckiej (licencja pochodzi³a z politechniki), wiêc jestem zmuszony przes³aæ kod w takiej formie. 
+
+
+ARDUINO
+
+1.	#include <Wire.h> //zadeklarowanie biblioteki wire.h  
+2.	#include <LPS.h> //zadeklarowanie biblioteki LPS.h  
+3.	  
+4.	LPS ps; //stworzenie obiektu ps - pierwszy czujnik  
+5.	LPS ps1; // stworzenie obiektu ps1 -  drugi czujnik  
+6.	  
+7.	void setup() { //w obrebie funkcji setup nastêpuje inicjalizacja dzia³ania programu i czujnikow  
+8.	  Serial.begin(9600);  //inicjalizacja dzia³ania komunikacji przez port szeregowy  
+9.	  Wire.begin();  //rozpoczêcie komunikacji   
+10.	    
+11.	  if (!ps.init(LPS::device_25H,LOW))  // test dzia³ania czujnika 1, który ma uziemiony pin SD0 ("LOW")  
+12.	  {  
+13.	    Serial.println("Failed to autodetect pressure sensor!");   
+14.	    while(1);  
+15.	  }  
+16.	  if (!ps1.init(LPS::device_25H,HIGH))  //test dzia³ania czujnika 2, którego pin SD0 jest w stanie wysokim("HIGH")  
+17.	  {  
+18.	    Serial.println("Failed to autodetect pressure sensor 2!");  
+19.	    while(1);  
+20.	  }  
+21.	  byte a = ps.getAddress();  
+22.	  byte b = ps1.getAddress();  
+23.	  Serial.print(a);  
+24.	  Serial.print("\t");  
+25.	  Serial.print(b);  
+26.	  Serial.print("\n"); // powy¿sze komendy wyœwietlaj¹ adresy obu czujników, aby potwierdziæ, ¿e siê od siebie ró¿ni¹  
+27.	  ps.enableDefault();   
+28.	  ps1.enableDefault(); // oba czujniki rozpoczynaj¹ pracê w standardowym trybie dzia³ania   
+29.	    
+30.	  ps.writeReg(LPS::RES_CONF,0x05);  
+31.	  ps.writeReg(LPS::FIFO_CTRL,0xC0);  
+32.	  ps.writeReg(LPS::CTRL_REG2,0x40);  
+33.	  
+34.	  ps1.writeReg(LPS::RES_CONF,0x05);  
+35.	  ps1.writeReg(LPS::FIFO_CTRL,0xC0);  
+36.	  ps1.writeReg(LPS::CTRL_REG2,0x40);  // zgodnie z informacjami zawartymi w dokumentacji technicznej, w obu czujnikach uruchamiana jest filtracja  
+37.	  
+38.	}  
+39.	  
+40.	void loop() { // w obrêbie funkcji loop wykonuje siê nieskoñczona pêtla   
+41.	  float pressure = ps.readPressureMillibars();  // odczytywanie wartoœci ciœnienia z czujnika 1 [hPa]  
+42.	  float pressure2 = ps1.readPressureMillibars();  // odczytanie wartoœci ciœnienia z czujnika 2 [hPa]  
+43.	  float temperature = ps.readTemperatureC();  // odczytanie wartoœci ciœnienia z czujnika 2 [deg. C]  
+44.	    
+45.	    
+46.	  Serial.print(pressure2);  
+47.	  Serial.print("\t");  
+48.	  Serial.print(pressure);  
+49.	  Serial.print("\t");  
+50.	  Serial.print(temperature);  
+51.	  Serial.print("\n");  // powy¿sze komendy wysy³aj¹ odczytane wartoœci przez port szeregowy   
+52.	  delay(100);  // opóŸnienie 0.1s  
+53.	  
+54.	}  
+
+MATLAB
+
+1.	arduino = serial('COM3','BaudRate',9600) %zdefiniowanie w³asnoœci portu szeregowego  
+2.	fopen(arduino); %inicjalizacja komunikacji z portem szeregowym  
+3.	POMIARY=[0;0;0];  
+4.	  
+5.	clc;  
+6.	figure(1)  
+7.	clf;   
+8.	figure(2)  
+9.	clf;  
+10.	figure(3)  
+11.	clf;   
+12.	figure(4)  
+13.	clf;   
+14.	figure(5)  
+15.	clf;  
+16.	k=1.4;  
+17.	R=287;  
+18.	t=0;  
+19.	  
+20.	QNH=101810;  
+21.	T_0=288.16; %definiowanie wartoœci sta³ych koniecznych do dzia³ania algorytmu i pocz¹tkowego czasu  
+22.	  
+23.	  
+24.	  
+25.	POMIARY=fscanf(arduino,'%f');  
+26.	test=(POMIARY(1,1)-POMIARY(2,1))  
+27.	pause(0.1); %pomiar testowy   
+28.	  
+29.	POMIARY=fscanf(arduino,'%f');  
+30.	p2=(POMIARY(1,1)-POMIARY(2,1))  
+31.	pause(0.1);  
+32.	  
+33.	POMIARY=fscanf(arduino,'%f');  
+34.	p3=(POMIARY(1,1)-POMIARY(2,1))  
+35.	pause(0.1);  
+36.	  
+37.	POMIARY=fscanf(arduino,'%f');  
+38.	p4=(POMIARY(1,1)-POMIARY(2,1))  
+39.	TA_poprzednie=((273.16+POMIARY(3,1))/0.0019812)*(((QNH/POMIARY(2,1))^(0.190255))-1)*0.3048;  
+40.	pause(0.1);  
+41.	  
+42.	  
+43.	POMIARY=fscanf(arduino,'%f');  
+44.	p5=(POMIARY(1,1)-POMIARY(2,1))  
+45.	pause(0.1);  
+46.	  
+47.	POMIARY=fscanf(arduino,'%f');  
+48.	p6=(POMIARY(1,1)-POMIARY(2,1)) %5 kolejnych pomiarów koniecznych do obliczenia poprawki  
+49.	                                %obliczenie pocz¹tkowej wartoœci wysokoœci  
+50.	  
+51.	poprawka=((p2+p3+p4+p5+p6)/5)*100; %obliczenie poprawki wskazañ   
+52.	  
+53.	  
+54.	while(t<15) %g³ówna pêtla obliczeniowa   
+55.	    tic; %inicjalizacja dzia³ania zegara   
+56.	      
+57.	      
+58.	     
+59.	   POMIARY=fscanf(arduino,'%f');  
+60.	   Total_pressure = (POMIARY(1,1)*100);  
+61.	   Static_pressure = (POMIARY(2,1)*100);  
+62.	   Total_temperature = POMIARY(3,1); %odczytanie wartoœci ciœnienia ca³kowitego, statycznego i temperatury  
+63.	     
+64.	   Tp=Total_pressure-poprawka;  
+65.	   Pd= Tp-Static_pressure  
+66.	   IAS=sqrt(5*k*R*T_0*((((Pd/101325)+1)^(2/7))-1))*0.51444;  
+67.	   M=sqrt(5*((((Pd/Static_pressure)+1)^(2/7))-1));  
+68.	   SAT =(Total_temperature/(1+(0.2*M^2)));  
+69.	   TAS = 38.968*M*SAT*0.51444;  
+70.	   PA=(288.16/0.0019812)*(1-((Static_pressure/101325)*0.190255));  
+71.	   TA=((273.16+SAT)/0.0019812)*(((QNH/Static_pressure)^(0.190255))-1); %implementacja algorytmu obliczeniowego   
+72.	   TA_m=TA*0.3048;  
+73.	   figure(1)  
+74.	   subplot(2,2,1)  
+75.	   hold on;  
+76.	   stem(t,IAS)  
+77.	   title('IAS')  
+78.	   xlabel('t[s] ')  
+79.	   ylabel('IAS [m/s]')  
+80.	   subplot(2,2,2)  
+81.	   hold on;  
+82.	   stem(t,M)  
+83.	   title('liczba Macha M')  
+84.	   xlabel('t[s] ')  
+85.	   ylabel('M')  
+86.	   subplot(2,2,3)  
+87.	   hold on;  
+88.	   stem(t,TAS)  
+89.	   title('predkosc rzeczywista TAS')  
+90.	   xlabel('t[s] ')  
+91.	   ylabel('TAS [m/s]')  
+92.	   figure(2)  
+93.	   hold on;  
+94.	   stem(t,SAT)  
+95.	   title('temperatura statyczna SAT')  
+96.	   xlabel('t[s] ')  
+97.	   ylabel('SAT[deg. C]')  
+98.	   figure(3)  
+99.	   subplot(1,2,1)  
+100.	   hold on;  
+101.	   stem(t,PA)  
+102.	 title('wysokosc barometryczna PA')  
+103.	   xlabel('t[s] ')  
+104.	   ylabel('PA [ft.]')  
+105.	   subplot(1,2,2)  
+106.	   hold on;  
+107.	   stem(t,TA)  
+108.	   title('wysokosc rzeczywista TA')  
+109.	   xlabel('t[s] ')  
+110.	   ylabel('TA [ft.]')  
+111.	   figure(4)  
+112.	   subplot(1,2,1);  
+113.	   hold on;  
+114.	   stem(t,Tp)  
+115.	   title("Cisnienie Calkowite")  
+116.	   xlabel('t[s] ')  
+117.	   ylabel('Pt [Pa]')  
+118.	   subplot(1,2,2);  
+119.	   hold on;  
+120.	   stem(t,Static_pressure)  
+121.	   title("Cisnienie Statyczne")  
+122.	   xlabel('t[s] ')  
+123.	   ylabel('Ps [Pa]') %powyzsze komendy generuj¹ wykresy obliczonych wartosci  
+124.	                                 %uzyto funkcji stem zamiast plot poniewaz  
+125.	                                 %sa to wartosci dyksretne   
+126.	     
+127.	   pause(0.05);% opoznienie 0.05s  
+128.	   t1=toc;%koniec dzialania zegara   
+129.	    
+130.	   w=((TA_m-TA_poprzednie)/t1);  
+131.	   w_poprzednie=w;  
+132.	   TA_poprzednie=TA_m;  
+133.	   figure(5)  
+134.	   hold on;  
+135.	   stem(t,w)  
+136.	   title('predkosc wznoszenia w')  
+137.	   xlabel('t[s] ')  
+138.	   ylabel('w [m/s]')%powyzsze komendy obliczaja i generuja wykres  
+139.	                                 %predkosci wznoszenia   
+140.	    
+141.	    t=t+t1; %aktualizacja czasu  
+142.	     
+143.	  
+144.	end  
+145.	fclose(arduino); %zakonczenie komunikacji z portem szeregowym  
+146.	  
+147.	hold off;  
+148.	clear; %usuniecie zdefiniowanych zmiennych   
+
+Wstydzê siê za mój kod. 
